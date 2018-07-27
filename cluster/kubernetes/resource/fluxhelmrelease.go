@@ -97,52 +97,74 @@ func FindFluxHelmReleaseContainers(values map[string]interface{}, visit func(str
 }
 
 func interpret_stringmap(m map[string]interface{}) (image.Ref, ImageSetter, bool) {
-	if img, ok := m["image"]; ok {
-		if imgStr, ok := img.(string); ok {
-			imageRef, err := image.ParseRef(imgStr)
-			if err == nil {
-				var taggy bool
-				if tag, ok := m["tag"]; ok {
-					if tagStr, ok := tag.(string); ok {
-						taggy = true
-						imageRef.Tag = tagStr
-					}
+	switch img := m["image"].(type) {
+	case string:
+		imageRef, err := image.ParseRef(img)
+		if err == nil {
+			var taggy bool
+			if tag, ok := m["tag"]; ok {
+				if tagStr, ok := tag.(string); ok {
+					taggy = true
+					imageRef.Tag = tagStr
 				}
-				return imageRef, func(ref image.Ref) {
-					if taggy {
-						m["image"] = ref.Name.String()
-						m["tag"] = ref.Tag
-						return
-					}
-					m["image"] = ref.String()
-				}, true
+			}
+			return imageRef, func(ref image.Ref) {
+				if taggy {
+					m["image"] = ref.Name.String()
+					m["tag"] = ref.Tag
+					return
+				}
+				m["image"] = ref.String()
+			}, true
+		}
+	case map[string]interface{}:
+		if imgRepo, ok := img["repository"].(string); ok {
+			if imgTag, ok := img["tag"].(string); ok {
+				imgRef, err := image.ParseRef(imgRepo + ":" + imgTag)
+				if err == nil {
+					return imgRef, func(ref image.Ref) {
+						img["repository"] = ref.Name.String()
+						img["tag"] = ref.Tag
+					}, true
+				}
 			}
 		}
 	}
 	return image.Ref{}, nil, false
 }
 
-// Exactly the same code, lexically. just a different type, because go.
+// Almost exactly the same code, lexically. just a different type, because go.
 func interpret_anymap(m map[interface{}]interface{}) (image.Ref, ImageSetter, bool) {
-	if img, ok := m["image"]; ok {
-		if imgStr, ok := img.(string); ok {
-			imageRef, err := image.ParseRef(imgStr)
-			if err == nil {
-				var taggy bool
-				if tag, ok := m["tag"]; ok {
-					if tagStr, ok := tag.(string); ok {
-						taggy = true
-						imageRef.Tag = tagStr
-					}
+	switch img := m["image"].(type) {
+	case string:
+		imageRef, err := image.ParseRef(img)
+		if err == nil {
+			var taggy bool
+			if tag, ok := m["tag"]; ok {
+				if tagStr, ok := tag.(string); ok {
+					taggy = true
+					imageRef.Tag = tagStr
 				}
-				return imageRef, func(ref image.Ref) {
-					if taggy {
-						m["image"] = ref.Name.String()
-						m["tag"] = ref.Tag
-						return
-					}
-					m["image"] = ref.String()
-				}, true
+			}
+			return imageRef, func(ref image.Ref) {
+				if taggy {
+					m["image"] = ref.Name.String()
+					m["tag"] = ref.Tag
+					return
+				}
+				m["image"] = ref.String()
+			}, true
+		}
+	case map[interface{}]interface{}:
+		if imgRepo, ok := img["repository"].(string); ok {
+			if imgTag, ok := img["tag"].(string); ok {
+				imgRef, err := image.ParseRef(imgRepo + ":" + imgTag)
+				if err == nil {
+					return imgRef, func(ref image.Ref) {
+						img["repository"] = ref.Name.String()
+						img["tag"] = ref.Tag
+					}, true
+				}
 			}
 		}
 	}
