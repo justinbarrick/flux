@@ -129,6 +129,18 @@ func interpret_stringmap(m map[string]interface{}) (image.Ref, ImageSetter, bool
 				}
 			}
 		}
+	case map[interface{}]interface{}:
+		if imgRepo, ok := img["repository"].(string); ok {
+			if imgTag, ok := img["tag"].(string); ok {
+				imgRef, err := image.ParseRef(imgRepo + ":" + imgTag)
+				if err == nil {
+					return imgRef, func(ref image.Ref) {
+						img["repository"] = ref.Name.String()
+						img["tag"] = ref.Tag
+					}, true
+				}
+			}
+		}
 	}
 	return image.Ref{}, nil, false
 }
